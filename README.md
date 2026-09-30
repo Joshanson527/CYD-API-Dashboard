@@ -2,6 +2,9 @@
 
 A highly customizable, modular API dashboard and web control panel designed for the **ESP32 Cheap Yellow Display (CYD - ESP32-2432S028R)**. Monitor your home server, weather, Pi-hole, or smart home endpoints in real-time, trigger webhooks (GET/POST/PUT), and manage your layout entirely from a local web configuration UI.
 
+<img src="https://github.com/Joshanson527/CYD-API-Dashboard/blob/main/Photos/cyd-dashboard-2.png" width="350"> <img src="https://github.com/Joshanson527/CYD-API-Dashboard/blob/main/Photos/cyd-dashboard-1.png" width="350">
+<img src="https://github.com/Joshanson527/CYD-API-Dashboard/blob/main/Photos/cyd-dashboard-web.png" width="350">
+
 ---
 
 ## AI disclaimer:
