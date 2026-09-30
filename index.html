@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Config</title>
+    <style>
+        :root { --bg: #1e1e2e; --surface: #313244; --text: #cdd6f4; --accent: #89b4fa; --border: #45475a; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .tab-btn { background: transparent; color: var(--text); border: none; font-size: 16px; cursor: pointer; padding: 8px 16px; border-radius: 6px; }
+        .tab-btn.active { background: var(--surface); color: var(--accent); font-weight: bold; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .card { background: var(--surface); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; font-weight: bold; color: var(--accent); }
+        input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-family: inherit; }
+        textarea { height: 80px; resize: vertical; font-family: monospace; }
+        
+        .widget-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; }
+        .widget-header h3 { margin: 0; }
+        .delete-btn { background: #f38ba8; color: #111; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold;}
+        .move-btn { background: var(--border); color: var(--text); border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 14px;}
+        
+        .btn-section { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border: 1px dashed var(--border); margin-top: 10px; }
+        .btn-section h4 { margin: 0 0 10px 0; font-size: 14px; color: var(--text); }
+        
+        .actions { position: sticky; bottom: 20px; display: flex; justify-content: space-between; background: var(--surface); padding: 15px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        button.primary { background: var(--accent); color: #111; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button.secondary { background: var(--border); color: var(--text); border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        
+        #overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); color: white; align-items: center; justify-content: center; font-size: 24px; z-index: 1000; flex-direction: column; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-top: 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Icon Picker Modal */
+        #icon-modal { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; }
+        .modal-content { background:var(--bg); padding:20px; border-radius:12px; width:90%; max-width:600px; max-height:80vh; overflow-y:auto; border: 1px solid var(--border); }
+        .icon-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(90px, 1fr)); gap:15px; margin-top: 15px; }
+        .icon-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; cursor:pointer; text-align:center; display:flex; flex-direction:column; align-items:center; gap:8px; transition: 0.2s; color:var(--text); }
+        .icon-card:hover { border-color: var(--accent); transform: scale(1.05); color: var(--accent); }
+        .icon-card span.lbl { font-size: 11px; word-break: break-all; color: var(--text); }
+        .icon-box { display:flex; align-items:center; justify-content:center; width:28px; height:28px; color: currentColor; fill: white;}
+    </style>
+</head>
+<body>
+
+    <h1>ESP32 Dashboard Config</h1>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('settings')">Settings</button>
+        <button class="tab-btn" onclick="switchTab('widgets')">Widgets</button>
+    </div>
+
+    <div id="settings" class="tab-content active">
+        <div class="card">
+            <div class="form-group"><label>Hostname (AP Name if WiFi fails)</label><input type="text" id="s_host" placeholder="esp32-dashboard"></div>
+            <div class="form-group"><label>WiFi SSID</label><input type="text" id="s_ssid"></div>
+            <div class="form-group"><label>WiFi Password</label><input type="password" id="s_pass"></div>
+            <div class="form-group">
+                <label>Theme</label>
+                <select id="s_theme">
+                    <option value="dark">Dark (Default)</option>
+                    <option value="light">Light</option>
+                    <option value="ocean">Ocean (Deep Blues)</option>
+                    <option value="cyberpunk">Cyberpunk (Neon)</option>
+                    <option value="terminal">Terminal</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Idle time (ms) until auto scroll (0 for no auto scroll)</label><input type="number" id="s_idle" min="0" max="300000"></div>
+            <div class="form-group"><label>Auto scroll speed</label><input type="number" id="s_speed" min="0" max="10"></div>
+            <div class="form-group">
+                <label>Screen Rotation</label>
+                <select id="s_rot"><option value="0">0°</option><option value="90">90°</option><option value="180">180°</option><option value="270">270°</option></select>
+            </div>
+            <div class="form-group"><label>Brightness (0-100)</label><input type="number" id="s_bright" min="0" max="100"></div>
+        </div>
+    </div>
+
+    <div id="widgets" class="tab-content">
+        <div id="widgets-container"></div>
+        <button class="secondary" style="width: 100%; margin-bottom: 20px;" onclick="addWidget()">+ Add New Widget</button>
+    </div>
+
+    <div class="actions">
+        <button class="primary" onclick="saveConfig()">Save & Reboot</button>
+    </div>
+
+    <div id="overlay">
+        <div>Saving & Rebooting Device...</div>
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Icon Picker Modal -->
+    <div id="icon-modal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; color:var(--accent);">Select an Icon</h3>
+                <button class="delete-btn" onclick="document.getElementById('icon-modal').style.display='none'">Close</button>
+            </div>
+            <div id="icon-grid" class="icon-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let widgetsData = [];
+        let currentTargetIconIndex = -1;
+
+        const iconLibrary = [
+            { id: '', label: 'None' },
+            { id: 'wifi', label: 'Wi-Fi' },
+            { id: 'bluetooth', label: 'Bluetooth' },
+            { id: 'battery', label: 'Battery' },
+            { id: 'power', label: 'Power' },
+            { id: 'charge', label: 'Charge' },
+            { id: 'settings', label: 'Settings' },
+            { id: 'home', label: 'Home' },
+            { id: 'warning', label: 'Warning' },
+            { id: 'bell', label: 'Alert' },
+            { id: 'save', label: 'Save / Drive' },
+            { id: 'list', label: 'List' },
+            { id: 'refresh', label: 'Refresh' },
+            { id: 'usb', label: 'USB' },
+            { id: 'sd_card', label: 'SD Card' },
+            { id: 'trash', label: 'Trash' },
+            { id: 'upload', label: 'Upload' },
+            { id: 'download', label: 'Download' },
+            { id: 'directory', label: 'Folder' },
+            { id: 'audio', label: 'Audio' },
+            { id: 'video', label: 'Video' },
+            { id: 'image', label: 'Image' },
+            { id: 'eye_open', label: 'Eye Open' },
+            { id: 'call', label: 'Call' }
+        ];
+
+        function getIconSVG(id) {
+            const svgs = {
+                'wifi': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M288 96c-90.9 0-173.2 36-233.7 94.6-12.7 12.3-33 12-45.2-.7s-12-33 .7-45.2C81.7 74.9 179.9 32 288 32S494.3 74.9 566.3 144.7c12.7 12.3 13 32.6 .7 45.2s-32.6 13-45.2 .7C461.2 132 378.9 96 288 96zM240 432a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zM168 326.2c-11.7 13.3-31.9 14.5-45.2 2.8s-14.5-31.9-2.8-45.2C161 237.4 221.1 208 288 208s127 29.4 168 75.8c11.7 13.3 10.4 33.5-2.8 45.2s-33.5 10.4-45.2-2.8C378.6 292.9 335.8 272 288 272s-90.6 20.9-120 54.2z"/></svg>',
+                'bluetooth': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M260.6 171.1l-42.9 42.9-.3-86 43.2 43.1zM217.4 390.9l43.1-43.1-42.9-42.9-.2 86zM384 259.4C384 465 312.1 512 198.9 512S0 465 0 259.4 83.4 0 196.6 0 384 53.9 384 259.4zm-158.5 0l79.4-88.6-125.1-134.3 0 176.9-73.8-73.8-27 26.9 92.7 93-92.7 93 26.9 26.9 73.8-73.8 2.3 170 127.4-127.5-83.9-88.7z"/></svg>',
+                'battery': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M528 128c8.8 0 16 7.2 16 16l0 224c0 8.8-7.2 16-16 16l-416 0c-8.8 0-16-7.2-16-16l0-224c0-8.8 7.2-16 16-16l416 0zM112 64c-44.2 0-80 35.8-80 80l0 224c0 44.2 35.8 80 80 80l416 0c44.2 0 80-35.8 80-80l0-48c17.7 0 32-14.3 32-32l0-64c0-17.7-14.3-32-32-32l0-48c0-44.2-35.8-80-80-80L112 64zm56 112c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24l304 0c13.3 0 24-10.7 24-24l0-112c0-13.3-10.7-24-24-24l-304 0z"/></svg>',
+                'power': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M288 0c0-17.7-14.3-32-32-32S224-17.7 224 0l0 256c0 17.7 14.3 32 32 32s32-14.3 32-32L288 0zM146.3 98.4c14.5-10.1 18-30.1 7.9-44.6s-30.1-18-44.6-7.9C43.4 92.1 0 169 0 256 0 397.4 114.6 512 256 512S512 397.4 512 256c0-87-43.4-163.9-109.7-210.1-14.5-10.1-34.4-6.6-44.6 7.9s-6.6 34.4 7.9 44.6c49.8 34.8 82.3 92.4 82.3 157.6 0 106-86 192-192 192S64 362 64 256c0-65.2 32.5-122.9 82.3-157.6z"/></svg>',
+                'charge': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M338.8-9.9c11.9 8.6 16.3 24.2 10.9 37.8L271.3 224 416 224c13.5 0 25.5 8.4 30.1 21.1s.7 26.9-9.6 35.5l-288 240c-11.3 9.4-27.4 9.9-39.3 1.3s-16.3-24.2-10.9-37.8L176.7 288 32 288c-13.5 0-25.5-8.4-30.1-21.1s-.7-26.9 9.6-35.5l288-240c11.3-9.4 27.4-9.9 39.3-1.3z"/></svg>',
+                'settings': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M195.1 9.5C198.1-5.3 211.2-16 226.4-16l59.8 0c15.2 0 28.3 10.7 31.3 25.5L332 79.5c14.1 6 27.3 13.7 39.3 22.8l67.8-22.5c14.4-4.8 30.2 1.2 37.8 14.4l29.9 51.8c7.6 13.2 4.9 29.8-6.5 39.9L447 233.3c.9 7.4 1.3 15 1.3 22.7s-.5 15.3-1.3 22.7l53.4 47.5c11.4 10.1 14 26.8 6.5 39.9l-29.9 51.8c-7.6 13.1-23.4 19.2-37.8 14.4l-67.8-22.5c-12.1 9.1-25.3 16.7-39.3 22.8l-14.4 69.9c-3.1 14.9-16.2 25.5-31.3 25.5l-59.8 0c-15.2 0-28.3-10.7-31.3-25.5l-14.4-69.9c-14.1-6-27.2-13.7-39.3-22.8L73.5 432.3c-14.4 4.8-30.2-1.2-37.8-14.4L5.8 366.1c-7.6-13.2-4.9-29.8 6.5-39.9l53.4-47.5c-.9-7.4-1.3-15-1.3-22.7s.5-15.3 1.3-22.7L12.3 185.8c-11.4-10.1-14-26.8-6.5-39.9L35.7 94.1c7.6-13.2 23.4-19.2 37.8-14.4l67.8 22.5c12.1-9.1 25.3-16.7 39.3-22.8L195.1 9.5zM256.3 336a80 80 0 1 0 -.6-160 80 80 0 1 0 .6 160z"/></svg>',
+                'home': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M277.8 8.6c-12.3-11.4-31.3-11.4-43.5 0l-224 208c-9.6 9-12.8 22.9-8 35.1S18.8 272 32 272l16 0 0 176c0 35.3 28.7 64 64 64l288 0c35.3 0 64-28.7 64-64l0-176 16 0c13.2 0 25-8.1 29.8-20.3s1.6-26.2-8-35.1l-224-208zM240 320l32 0c26.5 0 48 21.5 48 48l0 96-128 0 0-96c0-26.5 21.5-48 48-48z"/></svg>',
+                'warning': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M256 0c14.7 0 28.2 8.1 35.2 21l216 400c6.7 12.4 6.4 27.4-.8 39.5S486.1 480 472 480L40 480c-14.1 0-27.2-7.4-34.4-19.5s-7.5-27.1-.8-39.5l216-400c7-12.9 20.5-21 35.2-21zm0 352a32 32 0 1 0 0 64 32 32 0 1 0 0-64zm0-192c-18.2 0-32.7 15.5-31.4 33.7l7.4 104c.9 12.5 11.4 22.3 23.9 22.3 12.6 0 23-9.7 23.9-22.3l7.4-104c1.3-18.2-13.1-33.7-31.4-33.7z"/></svg>',
+                'bell': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M224 0c-17.7 0-32 14.3-32 32l0 3.2C119 50 64 114.6 64 192l0 21.7c0 48.1-16.4 94.8-46.4 132.4L7.8 358.3C2.7 364.6 0 372.4 0 380.5 0 400.1 15.9 416 35.5 416l376.9 0c19.6 0 35.5-15.9 35.5-35.5 0-8.1-2.7-15.9-7.8-22.2l-9.8-12.2C400.4 308.5 384 261.8 384 213.7l0-21.7c0-77.4-55-142-128-156.8l0-3.2c0-17.7-14.3-32-32-32zM162 464c7.1 27.6 32.2 48 62 48s54.9-20.4 62-48l-124 0z"/></svg>',
+                'save': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-242.7c0-17-6.7-33.3-18.7-45.3L352 50.7C340 38.7 323.7 32 306.7 32L64 32zm32 96c0-17.7 14.3-32 32-32l160 0c17.7 0 32 14.3 32 32l0 64c0 17.7-14.3 32-32 32l-160 0c-17.7 0-32-14.3-32-32l0-64zM224 288a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg>',
+                'list': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M40 48C26.7 48 16 58.7 16 72l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24L40 48zM192 64c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L192 64zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-288 0zm0 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l288 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-288 0zM16 232l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24l-48 0c-13.3 0-24 10.7-24 24zM40 368c-13.3 0-24 10.7-24 24l0 48c0 13.3 10.7 24 24 24l48 0c13.3 0 24-10.7 24-24l0-48c0-13.3-10.7-24-24-24l-48 0z"/></svg>',
+                'refresh': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M480.1 192l7.9 0c13.3 0 24-10.7 24-24l0-144c0-9.7-5.8-18.5-14.8-22.2S477.9 .2 471 7L419.3 58.8C375 22.1 318 0 256 0 127 0 20.3 95.4 2.6 219.5 .1 237 12.2 253.2 29.7 255.7s33.7-9.7 36.2-27.1C79.2 135.5 159.3 64 256 64 300.4 64 341.2 79 373.7 104.3L327 151c-6.9 6.9-8.9 17.2-5.2 26.2S334.3 192 344 192l136.1 0zm29.4 100.5c2.5-17.5-9.7-33.7-27.1-36.2s-33.7 9.7-36.2 27.1c-13.3 93-93.4 164.5-190.1 164.5-44.4 0-85.2-15-117.7-40.3L185 361c6.9-6.9 8.9-17.2 5.2-26.2S177.7 320 168 320L24 320c-13.3 0-24 10.7-24 24L0 488c0 9.7 5.8 18.5 14.8 22.2S34.1 511.8 41 505l51.8-51.8C137 489.9 194 512 256 512 385 512 491.7 416.6 509.4 292.5z"/></svg>',
+                'usb': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M633.5 256c0 3.1-1.7 6.1-4.5 7.5L539.9 317c-1.4 .8-2.8 1.4-4.5 1.4-1.4 0-3.1-.3-4.5-1.1-2.8-1.7-4.5-4.5-4.5-7.8l0-35.6-230.7 0c25.3 39.6 40.5 106.9 69.6 106.9l26.7 0 0-26.8c0-5 3.9-8.9 8.9-8.9l89.1 0c5 0 8.9 3.9 8.9 8.9l0 89.1c0 5-3.9 8.9-8.9 8.9l-89.1 0c-5 0-8.9-3.9-8.9-8.9l0-26.7-26.7 0c-75.4 0-81.1-142.5-124.7-142.5l-100.3 0c-8.1 30.6-35.9 53.5-69 53.5-39.3-.1-71.3-32.1-71.3-71.4s32-71.3 71.3-71.3c33.1 0 61 22.8 69 53.5 39.1 0 43.9 9.5 74.6-60.4 40.1-89.1 58.1-82.1 108.9-82.1 7.5-20.9 27-35.6 50.4-35.6 29.5 0 53.5 23.9 53.5 53.5s-23.9 53.5-53.5 53.5c-23.4 0-42.9-14.8-50.4-35.6l-29.8 0c-29.1 0-44.3 67.4-69.6 106.9l302.1 0 0-35.6c0-3.3 1.7-6.1 4.5-7.8s6.4-1.4 8.9 .3L629 248.8c2.8 1.1 4.5 4.1 4.5 7.2z"/></svg>',
+                'sd_card': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M384 64c0-35.3-28.7-64-64-64L125.3 0C108.3 0 92 6.7 80 18.7L18.7 80C6.7 92 0 108.3 0 125.3L0 448c0 35.3 28.7 64 64 64l256 0c35.3 0 64-28.7 64-64l0-384zM160 88l0 48c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-48c0-13.3 10.7-24 24-24s24 10.7 24 24zm88 0l0 48c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-48c0-13.3 10.7-24 24-24s24 10.7 24 24zm88 0l0 48c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-48c0-13.3 10.7-24 24-24s24 10.7 24 24z"/></svg>',
+                'trash': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M136.7 5.9C141.1-7.2 153.3-16 167.1-16l113.9 0c13.8 0 26 8.8 30.4 21.9L320 32 416 32c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 8.7-26.1zM32 144l384 0 0 304c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-304zm88 64c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24z"/></svg>',
+                'upload': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M256 109.3L256 320c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-210.7-41.4 41.4c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3l96-96c12.5-12.5 32.8-12.5 45.3 0l96 96c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L256 109.3zM224 400c44.2 0 80-35.8 80-80l80 0c35.3 0 64 28.7 64 64l0 32c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64l0-32c0-35.3 28.7-64 64-64l80 0c0 44.2 35.8 80 80 80zm144 24a24 24 0 1 0 0-48 24 24 0 1 0 0 48z"/></svg>',
+                'download': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M256 32c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 210.7-41.4-41.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 242.7 256 32zM64 320c-35.3 0-64 28.7-64 64l0 32c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-32c0-35.3-28.7-64-64-64l-46.9 0-56.6 56.6c-31.2 31.2-81.9 31.2-113.1 0L110.9 320 64 320zm304 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg>',
+                'directory': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M64 448l384 0c35.3 0 64-28.7 64-64l0-240c0-35.3-28.7-64-64-64L298.7 80c-6.9 0-13.7-2.2-19.2-6.4L241.1 44.8C230 36.5 216.5 32 202.7 32L64 32C28.7 32 0 60.7 0 96L0 384c0 35.3 28.7 64 64 64z"/></svg>',
+                'audio': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M468 7c7.6 6.1 12 15.3 12 25l0 304c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6l0-116.7-224 49.8 0 206.3c0 44.2-43 80-96 80s-96-35.8-96-80 43-80 96-80c11.2 0 22 1.6 32 4.6L128 96c0-15 10.4-28 25.1-31.2l288-64c9.5-2.1 19.4 .2 27 6.3z"/></svg>',
+                'video': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M0 96C0 60.7 28.7 32 64 32l320 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM48 368l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm304-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 240l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0c-8.8 0-16 7.2-16 16zm304-16c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0zM48 112l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16L64 96c-8.8 0-16 7.2-16 16zM352 96c-8.8 0-16 7.2-16 16l0 32c0 8.8 7.2 16 16 16l32 0c8.8 0 16-7.2 16-16l0-32c0-8.8-7.2-16-16-16l-32 0z"/></svg>',
+                'image': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64L64 32zm64 80a48 48 0 1 1 0 96 48 48 0 1 1 0-96zM272 224c8.4 0 16.1 4.4 20.5 11.5l88 144c4.5 7.4 4.7 16.7 .5 24.3S368.7 416 360 416L88 416c-8.9 0-17.2-5-21.3-12.9s-3.5-17.5 1.6-24.8l56-80c4.5-6.4 11.8-10.2 19.7-10.2s15.2 3.8 19.7 10.2l26.4 37.8 61.4-100.5c4.4-7.1 12.1-11.5 20.5-11.5z"/></svg>',
+                'eye_open': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6-46.8 43.5-78.1 95.4-93 131.1-3.3 7.9-3.3 16.7 0 24.6 14.9 35.7 46.2 87.7 93 131.1 47.1 43.7 111.8 80.6 192.6 80.6s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1 3.3-7.9 3.3-16.7 0-24.6-14.9-35.7-46.2-87.7-93-131.1-47.1-43.7-111.8-80.6-192.6-80.6zM144 256a144 144 0 1 1 288 0 144 144 0 1 1 -288 0zm144-64c0 35.3-28.7 64-64 64-11.5 0-22.3-3-31.7-8.4-1 10.9-.1 22.1 2.9 33.2 13.7 51.2 66.4 81.6 117.6 67.9s81.6-66.4 67.9-117.6c-12.2-45.7-55.5-74.8-101.1-70.8 5.3 9.3 8.4 20.1 8.4 31.7z"/></svg>',
+                'call': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M351.8 25c7.8-18.8 28.4-28.9 48.1-23.5l5.5 1.5c64.6 17.6 119.8 80.2 103.7 156.4-37.1 175-174.8 312.7-349.8 349.8-76.3 16.2-138.8-39.1-156.4-103.7l-1.5-5.5c-5.4-19.7 4.7-40.3 23.5-48.1l97.3-40.5c16.5-6.9 35.6-2.1 47 11.8l38.6 47.2c70.3-34.9 126.8-93.3 159.3-164.9l-44.1-36.1c-13.9-11.3-18.6-30.4-11.8-47L351.8 25z"/></svg>',
+                '': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512"><!--!Font Awesome Free v7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.--><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg>'
+            };
+            return svgs[id] || svgs[''];
+        }
+
+        window.onload = async () => {
+            try {
+                const res = await fetch('/api/config');
+                const config = await res.json();
+                
+                const s = config.settings || {};
+                document.getElementById('s_host').value = s.hostname || '';
+                document.getElementById('s_ssid').value = s.wifi_ssid || '';
+                document.getElementById('s_pass').value = s.wifi_password || '';
+                document.getElementById('s_theme').value = s.theme || 'dark';
+                document.getElementById('s_idle').value = s.scroll_idle || 0;
+                document.getElementById('s_speed').value = s.scroll_speed || 2;
+                document.getElementById('s_rot').value = s.rotation ?? 0;
+                document.getElementById('s_bright').value = s.brightness || 100;
+
+                widgetsData = config.widgets || [];
+                renderWidgets();
+            } catch (e) {
+                alert("Failed to load config from ESP32.");
+            }
+        };
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Sync inputs to array so data isn't lost during re-ordering
+        function syncWidgetsDataFromDOM() {
+            widgetsData = [];
+            document.querySelectorAll('.widget-card').forEach(card => {
+                widgetsData.push({
+                    id: card.querySelector('.w_id').value,
+                    title: card.querySelector('.w_title').value,
+                    icon: card.querySelector('.w_icon').value,
+                    url: card.querySelector('.w_url').value,
+                    method: card.querySelector('.w_method').value,
+                    headerKey: card.querySelector('.w_hkey').value,
+                    headerValue: card.querySelector('.w_hval').value,
+                    payload: card.querySelector('.w_payload').value,
+                    refresh: parseInt(card.querySelector('.w_refresh').value),
+                    width: card.querySelector('.w_width').value,
+                    title_font_size: parseInt(card.querySelector('.w_title_font').value),
+                    font_size: parseInt(card.querySelector('.w_body_font').value),
+                    height: parseInt(card.querySelector('.w_height').value),
+                    body: card.querySelector('.w_body').value,
+                    btn1_label: card.querySelector('.w_b1_lbl').value,
+                    btn1_url: card.querySelector('.w_b1_url').value,
+                    btn1_method: card.querySelector('.w_b1_method').value,
+                    btn1_headerKey: card.querySelector('.w_b1_hkey').value,
+                    btn1_headerValue: card.querySelector('.w_b1_hval').value,
+                    btn1_payload: card.querySelector('.w_b1_payload').value,
+                    btn2_label: card.querySelector('.w_b2_lbl').value,
+                    btn2_url: card.querySelector('.w_b2_url').value,
+                    btn2_method: card.querySelector('.w_b2_method').value,
+                    btn2_headerKey: card.querySelector('.w_b2_hkey').value,
+                    btn2_headerValue: card.querySelector('.w_b2_hval').value,
+                    btn2_payload: card.querySelector('.w_b2_payload').value
+                });
+            });
+        }
+
+        function moveWidgetUp(index) {
+            if (index === 0) return;
+            syncWidgetsDataFromDOM();
+            const temp = widgetsData[index - 1];
+            widgetsData[index - 1] = widgetsData[index];
+            widgetsData[index] = temp;
+            renderWidgets();
+        }
+
+        function moveWidgetDown(index) {
+            if (index === widgetsData.length - 1) return;
+            syncWidgetsDataFromDOM();
+            const temp = widgetsData[index + 1];
+            widgetsData[index + 1] = widgetsData[index];
+            widgetsData[index] = temp;
+            renderWidgets();
+        }
+
+        const fontOptions = (val) => `
+            <option value="12" ${val === 12 ? 'selected' : ''}>12 px</option>
+            <option value="14" ${val === 14 ? 'selected' : ''}>14 px</option>
+            <option value="16" ${val === 16 ? 'selected' : ''}>16 px</option>
+            <option value="18" ${val === 18 ? 'selected' : ''}>18 px</option>
+            <option value="20" ${val === 20 ? 'selected' : ''}>20 px</option>`;
+
+        function renderWidgets() {
+            const container = document.getElementById('widgets-container');
+            container.innerHTML = '';
+            
+            widgetsData.forEach((w, index) => {
+                const wVal = w.width || "1/2";
+                const iconId = w.icon || '';
+
+                container.innerHTML += `
+                    <div class="card widget-card" data-index="${index}">
+                        <div class="widget-header">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <h3>Widget: ${w.title || 'New Widget'}</h3>
+                                <button class="move-btn" onclick="moveWidgetUp(${index})">▲</button>
+                                <button class="move-btn" onclick="moveWidgetDown(${index})">▼</button>
+                            </div>
+                            <button class="delete-btn" onclick="deleteWidget(${index})">Delete</button>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex:1"><label>ID</label><input type="text" class="w_id" value="${w.id || ''}"></div>
+                            <div class="form-group" style="flex:2"><label>Title</label><input type="text" class="w_title" value="${w.title || ''}"></div>
+                            <div class="form-group" style="flex:1.5">
+                                <label>Icon</label>
+                                <div style="display:flex; gap:10px; align-items:center;">
+                                    <input type="hidden" class="w_icon" id="icon_in_${index}" value="${iconId}">
+                                    <div id="icon_preview_${index}" class="icon-box" style="background:var(--bg); padding:6px; border-radius:6px; border:1px solid var(--border);">${getIconSVG(iconId)}</div>
+                                    <button class="secondary" onclick="openIconPicker(${index})" style="flex-grow:1; padding: 8px;">Browse</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group"><label>API URL (Data Source)</label><input type="text" class="w_url" value="${w.url || ''}"></div>
+                        
+                        <details style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg);">
+                            <summary style="cursor: pointer; color: var(--accent); font-weight: bold; margin-bottom: 5px;">Advanced API Options (Method, Headers, Payload)</summary>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <div class="form-group" style="flex:1"><label>Method</label>
+                                    <select class="w_method">
+                                        <option value="GET" ${w.method==='GET'?'selected':''}>GET</option>
+                                        <option value="POST" ${w.method==='POST'?'selected':''}>POST</option>
+                                        <option value="PUT" ${w.method==='PUT'?'selected':''}>PUT</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="flex:1.5"><label>Header Key</label><input type="text" class="w_hkey" placeholder="e.g. X-Api-Key" value="${w.headerKey || ''}"></div>
+                                <div class="form-group" style="flex:2"><label>Header Value</label><input type="text" class="w_hval" placeholder="Bearer ..." value="${w.headerValue || ''}"></div>
+                            </div>
+                            <div class="form-group"><label>Payload (JSON/Body)</label><textarea class="w_payload" style="height: 60px;">${w.payload || ''}</textarea></div>
+                        </details>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex:1"><label>Refresh (s)</label><input type="number" class="w_refresh" value="${w.refresh || 0}"></div>
+                            <div class="form-group" style="flex:1.5"><label>Width</label>
+                                <select class="w_width">
+                                    <option value="1/3" ${wVal === "1/3" ? 'selected' : ''}>1/3 Width</option>
+                                    <option value="1/2" ${wVal === "1/2" ? 'selected' : ''}>1/2 Width</option>
+                                    <option value="2/3" ${wVal === "2/3" ? 'selected' : ''}>2/3 Width</option>
+                                    <option value="full" ${wVal === "full" ? 'selected' : ''}>Full Width</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1"><label>Title Font</label><select class="w_title_font">${fontOptions(w.title_font_size || 16)}</select></div>
+                            <div class="form-group" style="flex:1"><label>Body Font</label><select class="w_body_font">${fontOptions(w.font_size || 14)}</select></div>
+                            <div class="form-group" style="flex:1"><label>Height (0 = Auto)</label><input type="number" class="w_height" min="0" value="${w.height ?? 100}"></div>
+                        </div>
+
+                        <div class="form-group"><label>Template Body</label><textarea class="w_body">${w.body || ''}</textarea></div>
+
+                        <details style="margin-top: 5px;">
+                            <summary style="cursor:pointer; font-size: 13px; color: var(--accent);">Formatting Guide</summary>
+                            <div style="font-size: 12px; color: var(--text); margin-top: 8px; line-height: 1.4;">
+                                <p style="margin: 0 0 6px 0;">Use <code>{path}</code> for JSON fields. Dot notation and negative indices are supported (e.g., <code>{ip.addresses.-1}</code>).</p>
+                                <p style="margin: 0 0 6px 0;">Use <code>?? default</code> for fallbacks (e.g., <code>{temp ?? N/A}</code>).</p>
+                                <strong style="color: var(--accent);">Filters (use <code>|</code> before <code>??</code>):</strong>
+                                <ul style="margin: 4px 0 0 0; padding-left: 18px;">
+                                    <li><code>| join</code> — Join array with commas: <code>{temps | join}</code> &rarr; 78, 74, 73</li>
+                                    <li><code>| count</code> — Count array items: <code>{temps | count}</code> &rarr; 3</li>
+                                    <li><code>| [digits]</code> — Round decimals: <code>{temp | 1}</code> &rarr; 78.0</li>
+                                    <li><code>| upper</code> / <code>lower</code> — Change case: <code>{status | upper}</code> &rarr; ONLINE</li>
+                                </ul>
+                            </div>
+                        </details>
+
+                        <div class="btn-section">
+                            <h4>Action Buttons (Optional)</h4>
+                            
+                            <!-- Button 1 -->
+                            <div style="border-left: 2px solid var(--accent); padding-left: 10px; margin-bottom: 15px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <div class="form-group" style="flex:1"><label>Button 1 Label</label><input type="text" class="w_b1_lbl" value="${w.btn1_label || ''}"></div>
+                                    <div class="form-group" style="flex:2"><label>Button 1 URL</label><input type="text" class="w_b1_url" value="${w.btn1_url || ''}"></div>
+                                </div>
+                                <details style="margin-top: 5px;">
+                                    <summary style="cursor:pointer; font-size: 13px; color: var(--accent);">Advanced Button 1 Settings</summary>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <div class="form-group" style="flex:1"><label>Method</label>
+                                            <select class="w_b1_method">
+                                                <option value="GET" ${w.btn1_method==='GET'?'selected':''}>GET</option>
+                                                <option value="POST" ${w.btn1_method==='POST'?'selected':''}>POST</option>
+                                                <option value="PUT" ${w.btn1_method==='PUT'?'selected':''}>PUT</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="flex:1.5"><label>Header Key</label><input type="text" class="w_b1_hkey" placeholder="Auth-Token" value="${w.btn1_headerKey || ''}"></div>
+                                        <div class="form-group" style="flex:2"><label>Header Value</label><input type="text" class="w_b1_hval" value="${w.btn1_headerValue || ''}"></div>
+                                    </div>
+                                    <div class="form-group"><label>Payload</label><textarea class="w_b1_payload" style="height: 50px;">${w.btn1_payload || ''}</textarea></div>
+                                </details>
+                            </div>
+
+                            <!-- Button 2 -->
+                            <div style="border-left: 2px solid var(--accent); padding-left: 10px; margin-bottom: 5px;">
+                                <div style="display: flex; gap: 10px;">
+                                    <div class="form-group" style="flex:1"><label>Button 2 Label</label><input type="text" class="w_b2_lbl" value="${w.btn2_label || ''}"></div>
+                                    <div class="form-group" style="flex:2"><label>Button 2 URL</label><input type="text" class="w_b2_url" value="${w.btn2_url || ''}"></div>
+                                </div>
+                                <details style="margin-top: 5px;">
+                                    <summary style="cursor:pointer; font-size: 13px; color: var(--accent);">Advanced Button 2 Settings</summary>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <div class="form-group" style="flex:1"><label>Method</label>
+                                            <select class="w_b2_method">
+                                                <option value="GET" ${w.btn2_method==='GET'?'selected':''}>GET</option>
+                                                <option value="POST" ${w.btn2_method==='POST'?'selected':''}>POST</option>
+                                                <option value="PUT" ${w.btn2_method==='PUT'?'selected':''}>PUT</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group" style="flex:1.5"><label>Header Key</label><input type="text" class="w_b2_hkey" value="${w.btn2_headerKey || ''}"></div>
+                                        <div class="form-group" style="flex:2"><label>Header Value</label><input type="text" class="w_b2_hval" value="${w.btn2_headerValue || ''}"></div>
+                                    </div>
+                                    <div class="form-group"><label>Payload</label><textarea class="w_b2_payload" style="height: 50px;">${w.btn2_payload || ''}</textarea></div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openIconPicker(index) {
+            currentTargetIconIndex = index;
+            const grid = document.getElementById('icon-grid');
+            grid.innerHTML = '';
+            
+            iconLibrary.forEach(icon => {
+                grid.innerHTML += `
+                    <div class="icon-card" onclick="selectIcon('${icon.id}')">
+                        <div class="icon-box">${getIconSVG(icon.id)}</div>
+                        <span class="lbl">${icon.label}</span>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('icon-modal').style.display = 'flex';
+        }
+
+        function selectIcon(id) {
+            document.getElementById('icon_in_' + currentTargetIconIndex).value = id;
+            document.getElementById('icon_preview_' + currentTargetIconIndex).innerHTML = getIconSVG(id);
+            document.getElementById('icon-modal').style.display = 'none';
+        }
+
+        function addWidget() {
+            syncWidgetsDataFromDOM();
+            widgetsData.push({ 
+                id: "new", title: "New Widget", url: "https://", refresh: 60, width: "1/2", 
+                font_size: 14, title_font_size: 16, height: 110, body: "Data: {value}",
+                method: "GET", headerKey: "", headerValue: "", payload: "",
+                btn1_method: "GET", btn1_headerKey: "", btn1_headerValue: "", btn1_payload: "",
+                btn2_method: "GET", btn2_headerKey: "", btn2_headerValue: "", btn2_payload: ""
+            });
+            renderWidgets();
+        }
+
+        function deleteWidget(index) {
+            if(confirm("Delete this widget?")) {
+                syncWidgetsDataFromDOM();
+                widgetsData.splice(index, 1);
+                renderWidgets();
+            }
+        }
+
+        async function saveConfig() {
+            syncWidgetsDataFromDOM();
+            
+            const newConfig = {
+                settings: {
+                    hostname: document.getElementById('s_host').value,
+                    wifi_ssid: document.getElementById('s_ssid').value,
+                    wifi_password: document.getElementById('s_pass').value,
+                    theme: document.getElementById('s_theme').value,
+                    scroll_idle: parseInt(document.getElementById('s_idle').value),
+                    scroll_speed: parseInt(document.getElementById('s_speed').value),
+                    rotation: parseInt(document.getElementById('s_rot').value),
+                    brightness: parseInt(document.getElementById('s_bright').value)
+                },
+                widgets: widgetsData
+            };
+
+            document.getElementById('overlay').style.display = 'flex';
+            try {
+                const response = await fetch('/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(newConfig) });
+                if (response.ok) { setTimeout(() => { window.location.reload(true); }, 5000); } 
+                else { document.getElementById('overlay').style.display = 'none'; alert("Failed to save."); }
+            } catch (err) {
+                setTimeout(() => { window.location.reload(true); }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
